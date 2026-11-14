@@ -44,6 +44,7 @@ public class InvoiceItem {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 
+    @Builder.Default
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal discount = BigDecimal.ZERO;
 

@@ -1,8 +1,10 @@
 package com.subhas.inventory_management.services;
 
 import com.subhas.inventory_management.entity.*;
+import com.subhas.inventory_management.exception.ApiException;
 import com.subhas.inventory_management.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,7 @@ public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
     private final CompanyRepository companyRepository;
+    private final CustomerRepository customerRepository;
     private final BatchAllocationService allocationService;
     private final GstCalculator gst;
 
@@ -24,21 +27,53 @@ public class InvoiceService {
                            BigDecimal discountPct) {}
 
     @Transactional
-    public Invoice createInvoice(Customer customer, List<SaleLine> lines,
-                                 String paymentMode, Integer userId) {
+    public Invoice createInvoice(Customer customerOrNull,           // from customerID (registered)
+                                 String walkInName,
+                                 String walkInGstin,
+                                 String walkInMobile,
+                                 String walkInState,
+                                 List<SaleLine> lines,
+                                 String paymentMode,
+                                 Integer userId) {
 
         Company company = companyRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new IllegalStateException("Company not configured"));
+                .orElseThrow(() -> new ApiException(
+                        "Please configure company details first (Settings → Company).",
+                        HttpStatus.PRECONDITION_REQUIRED));
+
+        Customer customer = customerOrNull;
+        if (customer == null && walkInName != null && !walkInName.isBlank()) {
+            customer = customerRepository
+                    .findFirstByFullNameIgnoreCaseAndCustomerType(walkInName, "WALK_IN")
+                    .orElseGet(() -> {
+                        Customer c = Customer.builder()
+                                .fullName(walkInName)
+                                .gstin(walkInGstin)                         // usually null
+                                .mobile(walkInMobile != null ? walkInMobile : "")  // NOT NULL in schema
+                                .address("")                                 // NOT NULL in schema
+                                .state(walkInState != null ? walkInState : company.getState())
+                                .customerType("WALK_IN")
+                                .status("Active")
+                                .build();
+                        return customerRepository.save(c);
+                    });
+        }
+
+        // If still null, refuse (need at least a name)
+        if (customer == null) {
+            throw new ApiException("Customer name is required", HttpStatus.BAD_REQUEST);
+        }
 
         Invoice invoice = Invoice.builder()
                 .invoiceNo(nextInvoiceNo(company))
                 .invoiceDate(LocalDate.now())
                 .customer(customer)
-                .customerName(customer != null ? customer.getFullName() : "Walk-in")
-                .customerGstin(customer != null ? customer.getGstin() : null)
-                .customerState(customer != null ? customer.getState() : company.getState())
-                .placeOfSupply(customer != null ? customer.getState() : company.getState())
-                .paymentMode(paymentMode)
+                .customerName(customer.getFullName())
+                .customerGstin(customer.getGstin())
+                .customerState(customer.getState())
+                .placeOfSupply(customer.getState())
+                .paymentMode(paymentMode != null ? paymentMode : "CASH")
+                .status("PAID")
                 .createdBy(userId)
                 .build();
 

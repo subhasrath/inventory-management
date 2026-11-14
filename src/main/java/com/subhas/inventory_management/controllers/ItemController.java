@@ -8,10 +8,12 @@ import com.subhas.inventory_management.repository.ItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -24,6 +26,7 @@ public class ItemController {
 
     // ---------- GET: list / search ----------
     @GetMapping
+    @Transactional(readOnly = true)
     public List<ItemDto> list(@RequestParam(required = false) String q,
                               @RequestParam(required = false) String status) {
         List<Item> items;
@@ -38,16 +41,25 @@ public class ItemController {
     }
 
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ItemDto get(@PathVariable Integer id) {
         return toDto(find(id));
     }
 
     // ---------- Barcode lookup (for scanner) ----------
     @GetMapping("/barcode/{code}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ItemDto> byBarcode(@PathVariable String code) {
         Item item = itemRepository.findByBarcode(code)
                 .orElseThrow(() -> new ApiException(
                         "No item mapped to barcode " + code, HttpStatus.NOT_FOUND));
+
+        // REFUSE scanning inactive items
+        if (!"Active".equalsIgnoreCase(item.getStatus())) {
+            throw new ApiException(
+                    "Item '" + item.getItemName() + "' is inactive and cannot be billed.",
+                    HttpStatus.BAD_REQUEST);
+        }
         return ResponseEntity.ok(toDto(item));
     }
 
@@ -58,11 +70,32 @@ public class ItemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
     }
 
-    // ---------- PUT: update ----------
+    // ---------- PUT: update (does NOT change status) ----------
     @PutMapping("/{id}")
     public ItemDto update(@PathVariable Integer id, @RequestBody ItemDto dto) {
         Item existing = find(id);
+        // status is intentionally ignored here — use PATCH /status
         Item saved = itemRepository.save(apply(existing, dto));
+        return toDto(saved);
+    }
+
+    // ---------- PATCH: set status explicitly (activate / deactivate) ----------
+    @PatchMapping("/{id}/status")
+    public ItemDto setStatus(@PathVariable Integer id,
+                             @RequestBody Map<String, String> body) {
+        String newStatus = body.get("status");
+        if (newStatus == null) {
+            throw new ApiException("Field 'status' is required", HttpStatus.BAD_REQUEST);
+        }
+        newStatus = newStatus.trim();
+        if (!newStatus.equalsIgnoreCase("Active") && !newStatus.equalsIgnoreCase("Inactive")) {
+            throw new ApiException("status must be 'Active' or 'Inactive'", HttpStatus.BAD_REQUEST);
+        }
+        Item item = find(id);
+        item.setStatus(
+                newStatus.equalsIgnoreCase("Active") ? "Active" : "Inactive"
+        );
+        Item saved = itemRepository.save(item);
         return toDto(saved);
     }
 
@@ -93,7 +126,10 @@ public class ItemController {
         if (dto.getDiscount() != null)     target.setDiscount(dto.getDiscount());
         if (dto.getReorderLevel() != null) target.setReorderLevel(dto.getReorderLevel());
         target.setImageURL(dto.getImageURL());
-        if (dto.getStatus() != null)       target.setStatus(dto.getStatus());
+
+        // status is NOT set here — only via PATCH /status or DELETE
+        // (create() sets "Active" via the entity's @Builder.Default)
+
         return target;
     }
 

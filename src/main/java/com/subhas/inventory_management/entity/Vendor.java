@@ -46,6 +46,7 @@ public class Vendor {
     @Column(length = 10)
     private String pincode;
 
+    @Builder.Default
     @Column(nullable = false, length = 20)
     private String status = "Active";
 

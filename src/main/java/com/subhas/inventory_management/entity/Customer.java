@@ -49,11 +49,16 @@ public class Customer {
     @Column(length = 10)
     private String pincode;
 
+    @Builder.Default
     @Column(nullable = false, length = 20)
     private String status = "Active";
 
     @Column(updatable = false)
     private LocalDateTime createdOn;
+
+    @Builder.Default
+    @Column(nullable = false, length = 20)
+    private String customerType = "WALK_IN";   // WALK_IN | REGISTERED
 
     @PrePersist
     void onCreate() { this.createdOn = LocalDateTime.now(); }

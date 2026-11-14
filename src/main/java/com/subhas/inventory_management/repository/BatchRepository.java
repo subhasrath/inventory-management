@@ -14,17 +14,19 @@ public interface BatchRepository extends JpaRepository<Batch, Integer> {
     @Query("""
         SELECT b FROM Batch b
         WHERE b.product.productID = :productId AND b.qtyBalance > 0
+        AND b.product.status = 'Active'
         ORDER BY b.expiryDate ASC
     """)
     List<Batch> findAvailableBatchesFefo(@Param("productId") Integer productId);
 
     /** Expiry alerts within N days */
     @Query("""
-        SELECT b FROM Batch b
-        WHERE b.qtyBalance > 0
-          AND b.expiryDate <= :cutoff
-        ORDER BY b.expiryDate ASC
-    """)
+    SELECT b FROM Batch b
+    JOIN FETCH b.product
+    WHERE b.qtyBalance > 0
+      AND b.expiryDate <= :cutoff
+    ORDER BY b.expiryDate ASC
+""")
     List<Batch> findExpiringBefore(@Param("cutoff") LocalDate cutoff);
 
     @Query("""

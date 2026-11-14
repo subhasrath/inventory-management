@@ -42,27 +42,35 @@ public class Invoice {
     @Column(length = 100)
     private String placeOfSupply;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subTotal = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal cgst = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal sgst = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal igst = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 6, scale = 2)
     private BigDecimal roundOff = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal grandTotal = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, length = 20)
     private String paymentMode = "CASH";
 
+    @Builder.Default
     @Column(nullable = false, length = 20)
     private String status = "PAID";
 

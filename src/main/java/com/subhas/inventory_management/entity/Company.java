@@ -40,9 +40,11 @@ public class Company {
     @Column(length = 300)
     private String logoPath;
 
+    @Builder.Default
     @Column(nullable = false, length = 10)
     private String invoicePrefix = "INV";
 
+    @Builder.Default
     @Column(nullable = false)
     private Integer nextInvoiceNo = 1;
 

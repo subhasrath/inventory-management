@@ -32,18 +32,23 @@ public class Batch {
     @Column(nullable = false)
     private LocalDate expiryDate;
 
+    @Builder.Default
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal mrp = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal purchaseRate = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal saleRate = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 10, scale = 3)
     private BigDecimal qtyIn = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 10, scale = 3)
     private BigDecimal qtyBalance = BigDecimal.ZERO;
 

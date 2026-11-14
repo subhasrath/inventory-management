@@ -33,24 +33,30 @@ public class Item {
     @Column(length = 20)
     private String hsnCode;
 
+    @Builder.Default
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal gstRate = new BigDecimal("18.00");
 
+    @Builder.Default
     @Column(nullable = false, length = 10)
     private String unit = "PCS";
 
+    @Builder.Default
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal discount = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false)
     private Integer reorderLevel = 10;
 
     @Column(length = 300)
     private String imageURL;
 
+    @Builder.Default
     @Column(nullable = false, length = 20)
     private String status = "Active";
 

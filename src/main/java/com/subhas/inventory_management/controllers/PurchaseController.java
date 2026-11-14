@@ -41,12 +41,14 @@ public class PurchaseController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public List<PurchaseDto> list() {
         return purchaseRepository.findAll().stream()
                 .map(p -> toDto(p, false)).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public PurchaseDto get(@PathVariable Integer id) {
         Purchase p = purchaseRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Purchase not found", HttpStatus.NOT_FOUND));

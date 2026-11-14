@@ -10,7 +10,8 @@ public class InvoiceDto {
 
     // ---- Request fields ----
     private Integer customerID;               // null for walk-in
-    private String customerName;              // used when customerID is null
+    private String customerName;
+    private String customerMobile;  // used when customerID is null
     private String customerGstin;
     private String customerState;
     private String paymentMode;               // CASH / UPI / CARD / CREDIT

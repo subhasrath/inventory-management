@@ -37,19 +37,16 @@ public class InvoiceController {
         if (dto.getCustomerID() != null) {
             customer = customerRepository.findById(dto.getCustomerID())
                     .orElseThrow(() -> new ApiException("Customer not found", HttpStatus.NOT_FOUND));
-        } else if (dto.getCustomerName() != null) {
-            // Walk-in: build a transient Customer object (not persisted)
-            customer = Customer.builder()
-                    .fullName(dto.getCustomerName())
-                    .gstin(dto.getCustomerGstin())
-                    .state(dto.getCustomerState())
-                    .build();
         }
 
         List<InvoiceService.SaleLine> saleLines = new ArrayList<>();
         for (InvoiceLineDto l : dto.getItems()) {
             Item item = itemRepository.findById(l.getProductID())
                     .orElseThrow(() -> new ApiException("Item not found: " + l.getProductID(), HttpStatus.NOT_FOUND));
+            if (!"Active".equalsIgnoreCase(item.getStatus())) {
+                throw new ApiException("Item '" + item.getItemName() + "' is inactive and cannot be billed.",
+                        HttpStatus.BAD_REQUEST);
+            }
             saleLines.add(new InvoiceService.SaleLine(
                     item,
                     l.getQuantity(),
@@ -59,7 +56,12 @@ public class InvoiceController {
         }
 
         Invoice saved = invoiceService.createInvoice(
-                customer, saleLines,
+                customer,
+                dto.getCustomerName(),
+                dto.getCustomerGstin(),
+                dto.getCustomerMobile(),
+                dto.getCustomerState(),
+                saleLines,
                 dto.getPaymentMode() != null ? dto.getPaymentMode() : "CASH",
                 dto.getCreatedBy());
 
@@ -68,6 +70,7 @@ public class InvoiceController {
 
     // ---------- LIST / SEARCH ----------
     @GetMapping
+    @Transactional(readOnly = true)
     public List<InvoiceDto> list(@RequestParam(required = false) String from,
                                  @RequestParam(required = false) String to) {
         List<Invoice> invoices;
@@ -82,21 +85,23 @@ public class InvoiceController {
 
     // ---------- GET ONE (with line items) ----------
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public InvoiceDto get(@PathVariable Integer id) {
-        Invoice inv = invoiceRepository.findById(id)
+        Invoice inv = invoiceRepository.findByIdWithItemsAndProducts(id)
                 .orElseThrow(() -> new ApiException("Invoice not found", HttpStatus.NOT_FOUND));
         return toDto(inv, true);
     }
 
     @GetMapping("/by-no/{invoiceNo}")
+    @Transactional(readOnly = true)
     public InvoiceDto getByNo(@PathVariable String invoiceNo) {
-        Invoice inv = invoiceRepository.findByInvoiceNo(invoiceNo)
+        Invoice inv = invoiceRepository.findByInvoiceNoWithItems(invoiceNo)
                 .orElseThrow(() -> new ApiException("Invoice not found", HttpStatus.NOT_FOUND));
         return toDto(inv, true);
     }
 
     // ---------- Helper: map entity → DTO ----------
-    private InvoiceDto toDto(Invoice inv, boolean includeItems) {
+    public InvoiceDto toDto(Invoice inv, boolean includeItems) {
         InvoiceDto dto = InvoiceDto.builder()
                 .invoiceID(inv.getInvoiceID())
                 .invoiceNo(inv.getInvoiceNo())

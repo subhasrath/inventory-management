@@ -17,4 +17,5 @@ public class CustomerDto {
     private String state;
     private String pincode;
     private String status;
+    private String customerType;
 }

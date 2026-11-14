@@ -30,18 +30,23 @@ public class Purchase {
     @Column(length = 60)
     private String vendorBillNo;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subTotal = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal cgst = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal sgst = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal igst = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal grandTotal = BigDecimal.ZERO;
 

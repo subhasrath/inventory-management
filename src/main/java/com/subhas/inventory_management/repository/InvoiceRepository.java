@@ -14,9 +14,29 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
 
     List<Invoice> findByInvoiceDateBetween(LocalDate from, LocalDate to);
 
+    List<Invoice> findByCustomerCustomerIDOrderByInvoiceDateDesc(Integer customerID);
+
     @Query("SELECT COALESCE(SUM(i.grandTotal),0) FROM Invoice i WHERE i.invoiceDate = :d")
     java.math.BigDecimal totalForDate(@Param("d") LocalDate date);
 
     @Query("SELECT COUNT(i) FROM Invoice i WHERE i.invoiceDate = :d")
     long countForDate(@Param("d") LocalDate date);
+
+    @Query("""
+    SELECT DISTINCT i FROM Invoice i
+    LEFT JOIN FETCH i.items it
+    LEFT JOIN FETCH it.product
+    LEFT JOIN FETCH it.batch
+    WHERE i.invoiceID = :id
+""")
+    Optional<Invoice> findByIdWithItemsAndProducts(@Param("id") Integer id);
+
+    @Query("""
+    SELECT DISTINCT i FROM Invoice i
+    LEFT JOIN FETCH i.items it
+    LEFT JOIN FETCH it.product
+    LEFT JOIN FETCH it.batch
+    WHERE i.invoiceNo = :no
+""")
+    Optional<Invoice> findByInvoiceNoWithItems(@Param("no") String invoiceNo);
 }

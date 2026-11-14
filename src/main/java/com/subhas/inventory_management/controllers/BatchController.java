@@ -19,6 +19,7 @@ public class BatchController {
 
     /** All batches for one product */
     @GetMapping("/product/{productID}")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<BatchDto> byProduct(@PathVariable Integer productID) {
         return repo.findByProductProductIDOrderByExpiryDateAsc(productID)
                 .stream().map(this::toDto).collect(Collectors.toList());
@@ -26,6 +27,7 @@ public class BatchController {
 
     /** Batches expiring within N days (default 90) */
     @GetMapping("/expiring")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<BatchDto> expiring(@RequestParam(defaultValue = "90") int days) {
         return repo.findExpiringBefore(LocalDate.now().plusDays(days))
                 .stream().map(this::toDto).collect(Collectors.toList());

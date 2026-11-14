@@ -25,6 +25,7 @@ public class User {
     @Column(nullable = false, length = 30)
     private String role = "OPERATOR";
 
+    @Builder.Default
     @Column(nullable = false, length = 20)
     private String status = "Active";
 

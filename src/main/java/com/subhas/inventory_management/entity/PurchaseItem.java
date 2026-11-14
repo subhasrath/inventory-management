@@ -32,6 +32,7 @@ public class PurchaseItem {
     @Column(nullable = false)
     private LocalDate expiryDate;
 
+    @Builder.Default
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal mrp = BigDecimal.ZERO;
 
