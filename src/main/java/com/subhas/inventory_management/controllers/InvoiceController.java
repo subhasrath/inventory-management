@@ -100,6 +100,20 @@ public class InvoiceController {
         return toDto(inv, true);
     }
 
+    @GetMapping("/search")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<InvoiceDto> search(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        String query = (q != null && !q.trim().isEmpty()) ? q.trim() : null;
+        LocalDate fromDate = (from != null && !from.isBlank()) ? LocalDate.parse(from) : null;
+        LocalDate toDate   = (to   != null && !to.isBlank())   ? LocalDate.parse(to)   : null;
+
+        List<Invoice> invoices = invoiceRepository.search(query, fromDate, toDate);
+        return invoices.stream().map(i -> toDto(i, false)).collect(Collectors.toList());
+    }
+
     // ---------- Helper: map entity → DTO ----------
     public InvoiceDto toDto(Invoice inv, boolean includeItems) {
         InvoiceDto dto = InvoiceDto.builder()

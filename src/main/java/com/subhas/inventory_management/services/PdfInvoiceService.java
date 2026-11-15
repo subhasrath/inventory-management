@@ -117,7 +117,7 @@ public class PdfInvoiceService {
         drawText(cb, "GST INVOICE", x + w - 85, yCursor, F_TITLE);
         drawText(cb, copyLabel, x + w - 85, yCursor - 11, F_COPYTAG);
 
-        yCursor -= 14;
+        yCursor -= 18;                                        // <- Level-0 fix earlier
         drawText(cb, safe(company.getAddress()) + ", " + safe(company.getCity())
                         + " - " + safe(company.getPincode()) + ", " + safe(company.getState()),
                 x + 4, yCursor, F_SMALL);
@@ -170,11 +170,10 @@ public class PdfInvoiceService {
         cb.stroke();
         yCursor -= 2;
 
-        // ---- Items table ----
-        float[] colWidths = { 18, 120, 45, 42, 28, 40, 30, 50 };   // sums ~= 373
+        // ---- Items table (9 columns now: #, Item, Batch, Exp, Qty, Rate, Disc, GST%, Amount) ----
+        float[] colWidths = { 16, 108, 40, 38, 24, 34, 26, 24, 44 };   // sum ≈ 354
         float tableW = 0;
         for (float c : colWidths) tableW += c;
-        // scale to fit available width
         float scale = (w - 8) / tableW;
         for (int i = 0; i < colWidths.length; i++) colWidths[i] *= scale;
 
@@ -188,7 +187,7 @@ public class PdfInvoiceService {
         cb.fill();
         cb.restoreState();
 
-        String[] headers = { "#", "Item", "Batch", "Exp", "Qty", "Rate", "GST%", "Amount" };
+        String[] headers = { "#", "Item", "Batch", "Exp", "Qty", "Rate", "Disc", "GST%", "Amount" };
         float colX = x + 4;
         for (int i = 0; i < headers.length; i++) {
             drawText(cb, headers[i], colX + 2, yCursor - headerH + 3.5f, F_LABEL);
@@ -204,19 +203,26 @@ public class PdfInvoiceService {
         // rows
         int rowIdx = 1;
         for (InvoiceItem it : items) {
-            if (yCursor - rowH < y + 55) {           // space left for totals + signatures
+            if (yCursor - rowH < y + 65) {           // reserve room for totals + signatures
                 drawText(cb, "... continued ...", x + 8, yCursor - 8, F_SMALL);
                 break;
             }
             float rowBottom = yCursor - rowH;
             colX = x + 4;
+
+            BigDecimal discount = it.getDiscount() != null ? it.getDiscount() : BigDecimal.ZERO;
+            String discStr = discount.compareTo(BigDecimal.ZERO) > 0
+                    ? stripTrailingZeros(discount) + "%"
+                    : "-";
+
             String[] vals = {
                     String.valueOf(rowIdx++),
-                    truncate(safe(it.getItemName()), 25),
+                    truncate(safe(it.getItemName()), 22),        // shorter to fit Disc column
                     safe(it.getBatchNo()),
                     it.getExpiryDate() != null ? it.getExpiryDate().format(DATE_FMT) : "-",
                     stripTrailingZeros(it.getQuantity()),
                     money(it.getUnitPrice()),
+                    discStr,                                     // <- Level 1: NEW column
                     stripTrailingZeros(it.getGstRate()) + "%",
                     money(it.getLineTotal())
             };
@@ -235,10 +241,36 @@ public class PdfInvoiceService {
         }
 
         // ---- Totals block (right side) ----
+        // Level 2: compute gross (pre-discount taxable) and total discount
+        BigDecimal grossTaxable = BigDecimal.ZERO;
+        BigDecimal totalDiscount = BigDecimal.ZERO;
+        for (InvoiceItem it : items) {
+            BigDecimal qty   = it.getQuantity()   != null ? it.getQuantity()   : BigDecimal.ZERO;
+            BigDecimal price = it.getUnitPrice()  != null ? it.getUnitPrice()  : BigDecimal.ZERO;
+            BigDecimal disc  = it.getDiscount()   != null ? it.getDiscount()   : BigDecimal.ZERO;
+            BigDecimal gross = price.multiply(qty);
+            BigDecimal dAmt  = gross.multiply(disc).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
+            grossTaxable  = grossTaxable.add(gross);
+            totalDiscount = totalDiscount.add(dAmt);
+        }
+        boolean hasDiscount = totalDiscount.compareTo(BigDecimal.ZERO) > 0;
+
         float totalsX = x + w * 0.55f;
         float lineY = yCursor - 10;
-        drawTotalLine(cb, "Taxable Value:", invoice.getSubTotal(), totalsX, x + w - 6, lineY);
-        lineY -= 9;
+
+        if (hasDiscount) {
+            // Level 2: show Gross, Discount, then Taxable
+            drawTotalLine(cb, "Gross Value:", grossTaxable, totalsX, x + w - 6, lineY);
+            lineY -= 9;
+            drawTotalLine(cb, "Discount:", totalDiscount.negate(), totalsX, x + w - 6, lineY);
+            lineY -= 9;
+            drawTotalLine(cb, "Taxable Value:", invoice.getSubTotal(), totalsX, x + w - 6, lineY);
+            lineY -= 9;
+        } else {
+            drawTotalLine(cb, "Taxable Value:", invoice.getSubTotal(), totalsX, x + w - 6, lineY);
+            lineY -= 9;
+        }
+
         if (invoice.getIgst() != null && invoice.getIgst().compareTo(BigDecimal.ZERO) > 0) {
             drawTotalLine(cb, "IGST:", invoice.getIgst(), totalsX, x + w - 6, lineY);
             lineY -= 9;

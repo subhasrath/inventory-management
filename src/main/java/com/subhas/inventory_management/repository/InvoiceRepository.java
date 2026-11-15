@@ -39,4 +39,18 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
     WHERE i.invoiceNo = :no
 """)
     Optional<Invoice> findByInvoiceNoWithItems(@Param("no") String invoiceNo);
+
+    // InvoiceRepository.java
+    @Query("""
+    SELECT i FROM Invoice i
+    WHERE (:q IS NULL OR LOWER(i.invoiceNo) LIKE LOWER(CONCAT('%', :q, '%'))
+                     OR LOWER(i.customerName) LIKE LOWER(CONCAT('%', :q, '%'))
+                     OR LOWER(i.customerGstin) LIKE LOWER(CONCAT('%', :q, '%')))
+      AND (:from IS NULL OR i.invoiceDate >= :from)
+      AND (:to   IS NULL OR i.invoiceDate <= :to)
+    ORDER BY i.invoiceDate DESC, i.invoiceID DESC
+""")
+    List<Invoice> search(@Param("q") String q,
+                         @Param("from") LocalDate from,
+                         @Param("to") LocalDate to);
 }
